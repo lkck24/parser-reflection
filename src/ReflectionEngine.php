@@ -12,6 +12,7 @@ namespace Go\ParserReflection;
 
 use Go\ParserReflection\Instrument\PathResolver;
 use Go\ParserReflection\NodeVisitor\RootNamespaceNormalizer;
+use Laminas\ZendFrameworkBridge\RewriteRules;
 use PhpParser\Lexer;
 use PhpParser\Node;
 use PhpParser\Node\Stmt\ClassConst;
@@ -275,6 +276,25 @@ class ReflectionEngine
             $topLevelNodeName = $topLevelNode->name ? $topLevelNode->name->toString() : '';
             if (ltrim($topLevelNodeName, '\\') === trim($namespaceName, '\\')) {
                 return $topLevelNode;
+            }
+            if (!is_array($topLevelNode->name->parts)) {
+                continue;
+            }
+
+            if (class_exists(RewriteRules::class)) {
+
+                foreach (RewriteRules::namespaceRewrite() as $zendNamespace => $laminasNamespace) {
+                    $namespaceParts = $topLevelNode->name->parts;
+
+                    $zendNamespaceParts = explode('\\', trim($zendNamespace, '\\'));
+                    foreach ($zendNamespaceParts as $key => $value) {
+                        $namespaceParts[$key] = $value;
+                    }
+
+                    if (implode('\\', $namespaceParts) === trim($namespaceName, '\\')) {
+                        return $topLevelNode;
+                    }
+                }
             }
         }
 
